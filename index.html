@@ -151,6 +151,7 @@
 
   <main class="relative z-10 min-h-screen px-4 py-8 sm:px-6 lg:px-8">
     <section class="mx-auto max-w-7xl">
+
       <div class="mb-8 text-center text-white">
         <div class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold shadow-xl backdrop-blur-xl">
           <span class="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.95)]"></span>
@@ -167,7 +168,9 @@
       </div>
 
       <div class="rounded-[2rem] border border-white/30 bg-white/80 p-5 shadow-2xl backdrop-blur-xl sm:p-8 lg:p-10">
+
         <div class="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+
           <div>
             <div class="rounded-[1.5rem] border border-cyan-100 bg-gradient-to-br from-white to-cyan-50/80 p-6 shadow-xl">
               <div class="mb-5 inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-cyan-200 shadow-lg">
@@ -177,23 +180,6 @@
               <p class="text-lg leading-9 text-slate-700">
                 ברוכים הבאים למערכת חילוץ הנתונים. כאן תוכלו לשלוף שערי סגירה למספר מניות במקביל, להשוות ביניהן בסדרות-זמן, ולייצא בקליק.
               </p>
-
-              <div class="mt-6 grid gap-4 sm:grid-cols-3">
-                <div class="rounded-2xl bg-white p-4 shadow-lg">
-                  <p class="text-sm font-bold text-slate-500">שלב ראשון</p>
-                  <p class="mt-1 text-lg font-black text-slate-900">בחירת מניות</p>
-                </div>
-
-                <div class="rounded-2xl bg-white p-4 shadow-lg">
-                  <p class="text-sm font-bold text-slate-500">שלב שני</p>
-                  <p class="mt-1 text-lg font-black text-slate-900">טעינת נתונים</p>
-                </div>
-
-                <div class="rounded-2xl bg-white p-4 shadow-lg">
-                  <p class="text-sm font-bold text-slate-500">שלב שלישי</p>
-                  <p class="mt-1 text-lg font-black text-slate-900">ייצוא חכם</p>
-                </div>
-              </div>
             </div>
 
             <div class="mt-6 rounded-[1.5rem] border border-white bg-white/90 p-6 shadow-xl">
@@ -289,13 +275,6 @@
                   לאחר טעינת הנתונים ניתן להוריד קובץ או ליצור גיליון חדש בלחיצה.
                 </p>
               </div>
-
-              <div class="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 p-5">
-                <p class="text-sm font-bold text-cyan-200">טיפ</p>
-                <p class="mt-2 text-sm leading-7 text-white/75">
-                  מומלץ להזין מספר סימולים כדי לקבל השוואה נוחה בין נכסים שונים באותה סדרת־זמן.
-                </p>
-              </div>
             </div>
           </aside>
         </div>
@@ -338,12 +317,13 @@
         </div>
 
         <div id="successBox" class="mt-8 hidden rounded-3xl border border-emerald-200 bg-emerald-50 p-6 shadow-xl"></div>
+
       </div>
     </section>
   </main>
 
   <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8IFGZYkd4ALxoFl_Fuv8QwJ-Kn4bBGOcu2XTU22yw/dev";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8IFGZYkd4ALxoFl_Fuv8QwJ-Kn4bBGOcu2XTU22yw/exec";
 
     let globalCsvData = "";
 
@@ -526,11 +506,19 @@
 
       const response = await fetch(WEB_APP_URL, {
         method: "POST",
-        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
         body: JSON.stringify(payload)
       });
 
-      return await response.json();
+      const text = await response.text();
+
+      try {
+        return JSON.parse(text);
+      } catch (err) {
+        throw new Error("השרת לא החזיר JSON תקין. ייתכן שה־Deploy לא פתוח ל־Anyone או שהקישור לא נכון.");
+      }
     }
 
     loadBtn.addEventListener("click", async () => {
@@ -561,7 +549,8 @@
 
       } catch (error) {
         loadingBox.classList.add("hidden");
-        showError("אירעה שגיאה בתקשורת עם השרת. ודאו שהקישור של Web App תקין.");
+        showError("שגיאה: " + error.message);
+        console.error(error);
       }
     });
 
@@ -609,7 +598,8 @@
 
       } catch (error) {
         loadingBox.classList.add("hidden");
-        showError("אירעה שגיאה בתקשורת עם השרת בזמן הייצוא ל־Google Sheets.");
+        showError("שגיאה: " + error.message);
+        console.error(error);
       }
     });
   </script>
