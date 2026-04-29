@@ -1,1 +1,617 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>מערכת חילוץ נתוני מניות</title>
 
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(34, 211, 238, 0.30), transparent 32%),
+        radial-gradient(circle at 85% 15%, rgba(168, 85, 247, 0.28), transparent 30%),
+        radial-gradient(circle at 60% 85%, rgba(16, 185, 129, 0.24), transparent 35%),
+        linear-gradient(135deg, #020617 0%, #0f172a 45%, #111827 100%);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    .mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(120deg, rgba(56, 189, 248, 0.16), transparent 35%),
+        linear-gradient(240deg, rgba(217, 70, 239, 0.14), transparent 40%);
+      filter: blur(18px);
+      animation: meshMove 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes meshMove {
+      0% {
+        transform: translate3d(-2%, -2%, 0) scale(1);
+        opacity: 0.78;
+      }
+      100% {
+        transform: translate3d(2%, 3%, 0) scale(1.08);
+        opacity: 1;
+      }
+    }
+
+    .particle {
+      position: fixed;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.42);
+      box-shadow: 0 0 22px rgba(125, 211, 252, 0.9);
+      animation: floatParticle linear infinite;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    @keyframes floatParticle {
+      from {
+        transform: translateY(105vh) translateX(0);
+        opacity: 0;
+      }
+      15% {
+        opacity: 0.8;
+      }
+      85% {
+        opacity: 0.8;
+      }
+      to {
+        transform: translateY(-10vh) translateX(50px);
+        opacity: 0;
+      }
+    }
+
+    .glow-button {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .glow-button::before {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      background: linear-gradient(90deg, #22d3ee, #a855f7, #10b981, #22d3ee);
+      background-size: 300% 300%;
+      animation: borderGlow 4s linear infinite;
+      z-index: -2;
+    }
+
+    .glow-button::after {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border-radius: 1rem;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      z-index: -1;
+    }
+
+    @keyframes borderGlow {
+      0% {
+        background-position: 0% 50%;
+      }
+      100% {
+        background-position: 300% 50%;
+      }
+    }
+
+    .loader-ring {
+      width: 58px;
+      height: 58px;
+      border-radius: 999px;
+      border: 5px solid rgba(255, 255, 255, 0.20);
+      border-top-color: #22d3ee;
+      border-left-color: #a855f7;
+      animation: spin 1s linear infinite;
+      box-shadow: 0 0 30px rgba(34, 211, 238, 0.55);
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .table-wrap::-webkit-scrollbar {
+      height: 10px;
+    }
+
+    .table-wrap::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.12);
+      border-radius: 999px;
+    }
+
+    .table-wrap::-webkit-scrollbar-thumb {
+      background: linear-gradient(90deg, #22d3ee, #a855f7);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+
+<body class="text-slate-900">
+  <div class="mesh"></div>
+
+  <span class="particle" style="left: 8%; animation-duration: 16s; animation-delay: 0s;"></span>
+  <span class="particle" style="left: 18%; animation-duration: 22s; animation-delay: 3s;"></span>
+  <span class="particle" style="left: 31%; animation-duration: 18s; animation-delay: 7s;"></span>
+  <span class="particle" style="left: 44%; animation-duration: 26s; animation-delay: 1s;"></span>
+  <span class="particle" style="left: 58%; animation-duration: 20s; animation-delay: 5s;"></span>
+  <span class="particle" style="left: 72%; animation-duration: 24s; animation-delay: 2s;"></span>
+  <span class="particle" style="left: 87%; animation-duration: 19s; animation-delay: 6s;"></span>
+
+  <main class="relative z-10 min-h-screen px-4 py-8 sm:px-6 lg:px-8">
+    <section class="mx-auto max-w-7xl">
+      <div class="mb-8 text-center text-white">
+        <div class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold shadow-xl backdrop-blur-xl">
+          <span class="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.95)]"></span>
+          מערכת פיננסית אינטראקטיבית
+        </div>
+
+        <h1 class="mt-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
+          חילוץ והשוואת נתוני מניות
+        </h1>
+
+        <p class="mx-auto mt-5 max-w-3xl text-lg leading-8 text-white/80">
+          ממשק מתקדם לשליפת שערי סגירה, בניית טבלת סדרות־זמן וייצוא נתונים בצורה נוחה ומהירה.
+        </p>
+      </div>
+
+      <div class="rounded-[2rem] border border-white/30 bg-white/80 p-5 shadow-2xl backdrop-blur-xl sm:p-8 lg:p-10">
+        <div class="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <div class="rounded-[1.5rem] border border-cyan-100 bg-gradient-to-br from-white to-cyan-50/80 p-6 shadow-xl">
+              <div class="mb-5 inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-cyan-200 shadow-lg">
+                ברוכים הבאים
+              </div>
+
+              <p class="text-lg leading-9 text-slate-700">
+                ברוכים הבאים למערכת חילוץ הנתונים. כאן תוכלו לשלוף שערי סגירה למספר מניות במקביל, להשוות ביניהן בסדרות-זמן, ולייצא בקליק.
+              </p>
+
+              <div class="mt-6 grid gap-4 sm:grid-cols-3">
+                <div class="rounded-2xl bg-white p-4 shadow-lg">
+                  <p class="text-sm font-bold text-slate-500">שלב ראשון</p>
+                  <p class="mt-1 text-lg font-black text-slate-900">בחירת מניות</p>
+                </div>
+
+                <div class="rounded-2xl bg-white p-4 shadow-lg">
+                  <p class="text-sm font-bold text-slate-500">שלב שני</p>
+                  <p class="mt-1 text-lg font-black text-slate-900">טעינת נתונים</p>
+                </div>
+
+                <div class="rounded-2xl bg-white p-4 shadow-lg">
+                  <p class="text-sm font-bold text-slate-500">שלב שלישי</p>
+                  <p class="mt-1 text-lg font-black text-slate-900">ייצוא חכם</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 rounded-[1.5rem] border border-white bg-white/90 p-6 shadow-xl">
+              <h2 class="text-2xl font-black text-slate-950">הגדרות שליפה</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-500">
+                מלאו את הפרטים הבאים כדי למשוך נתוני שוק עבור טיקר אחד או יותר.
+              </p>
+
+              <form id="stockForm" class="mt-6 grid gap-5 md:grid-cols-2">
+                <div class="md:col-span-2">
+                  <label for="tickers" class="mb-2 block text-sm font-extrabold text-slate-700">סימולי מניות</label>
+                  <input
+                    id="tickers"
+                    type="text"
+                    placeholder="לדוגמה: AAPL, MSFT, TSLA"
+                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-left text-lg font-semibold tracking-wide text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+                  />
+                  <p class="mt-2 text-sm font-medium text-slate-500">הזן סימולי מניות, מופרדים בפסיק</p>
+                </div>
+
+                <div>
+                  <label for="startDate" class="mb-2 block text-sm font-extrabold text-slate-700">תאריך התחלה</label>
+                  <input
+                    id="startDate"
+                    type="date"
+                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+                  />
+                </div>
+
+                <div>
+                  <label for="endDate" class="mb-2 block text-sm font-extrabold text-slate-700">תאריך סיום</label>
+                  <input
+                    id="endDate"
+                    type="date"
+                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+                  />
+                </div>
+
+                <div class="md:col-span-2">
+                  <label for="frequency" class="mb-2 block text-sm font-extrabold text-slate-700">תדירות נתונים</label>
+                  <select
+                    id="frequency"
+                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+                  >
+                    <option value="daily">יומי</option>
+                    <option value="weekly">שבועי</option>
+                    <option value="monthly">חודשי</option>
+                  </select>
+                </div>
+
+                <div class="md:col-span-2">
+                  <button
+                    id="loadBtn"
+                    type="button"
+                    class="glow-button group mt-2 w-full rounded-2xl px-8 py-5 text-lg font-black text-white shadow-2xl transition hover:-translate-y-1 hover:shadow-cyan-500/30 active:translate-y-0"
+                  >
+                    <span class="relative z-10 inline-flex items-center justify-center gap-3">
+                      <span>טען נתונים</span>
+                      <span class="transition group-hover:translate-x-[-4px]">←</span>
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <aside class="rounded-[1.5rem] border border-slate-200 bg-slate-950 p-6 text-white shadow-2xl">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-bold text-cyan-300">סקירת מערכת</p>
+                <h2 class="mt-1 text-2xl font-black">נתונים פיננסיים</h2>
+              </div>
+
+              <div class="rounded-2xl bg-white/10 px-4 py-3 text-center backdrop-blur">
+                <p class="text-xs font-bold text-white/60">מצב</p>
+                <p class="text-sm font-black text-emerald-300">מוכן</p>
+              </div>
+            </div>
+
+            <div class="mt-6 space-y-4">
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <p class="text-sm font-bold text-white/60">מבנה התוצאה</p>
+                <p class="mt-2 text-lg font-black">טבלה רחבה לפי תאריכים</p>
+                <p class="mt-2 text-sm leading-7 text-white/70">
+                  העמודה הראשונה היא תאריך, ולאחריה עמודה נפרדת לכל מניה שנבחרה.
+                </p>
+              </div>
+
+              <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <p class="text-sm font-bold text-white/60">אפשרויות ייצוא</p>
+                <p class="mt-2 text-lg font-black">קובץ CSV או גיליון Google</p>
+                <p class="mt-2 text-sm leading-7 text-white/70">
+                  לאחר טעינת הנתונים ניתן להוריד קובץ או ליצור גיליון חדש בלחיצה.
+                </p>
+              </div>
+
+              <div class="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 p-5">
+                <p class="text-sm font-bold text-cyan-200">טיפ</p>
+                <p class="mt-2 text-sm leading-7 text-white/75">
+                  מומלץ להזין מספר סימולים כדי לקבל השוואה נוחה בין נכסים שונים באותה סדרת־זמן.
+                </p>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div id="alertBox" class="mt-8 hidden rounded-3xl border p-5 text-base font-bold shadow-xl"></div>
+
+        <div id="loadingBox" class="mt-8 hidden rounded-3xl border border-cyan-200 bg-cyan-50/90 p-8 text-center shadow-xl">
+          <div class="mx-auto loader-ring"></div>
+          <p class="mt-5 text-xl font-black text-slate-900">מושך נתוני שוק...</p>
+          <p class="mt-2 text-sm font-semibold text-slate-500">אנחנו מארגנים עבורך את הטבלה בצורה נקייה ומוכנה לייצוא</p>
+        </div>
+
+        <div id="previewTable" class="mt-8"></div>
+
+        <div id="exportBox" class="mt-8 hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-cyan-50 p-6 shadow-xl">
+          <div class="mb-5">
+            <h3 class="text-2xl font-black text-slate-950">ייצוא הנתונים</h3>
+            <p class="mt-2 text-sm font-semibold text-slate-500">
+              הנתונים מוכנים. בחרו את דרך הייצוא הרצויה.
+            </p>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <button
+              id="downloadCsvBtn"
+              type="button"
+              class="rounded-2xl bg-slate-950 px-6 py-4 text-lg font-black text-white shadow-xl transition hover:-translate-y-1 hover:bg-slate-800"
+            >
+              הורד כ-CSV
+            </button>
+
+            <button
+              id="exportSheetBtn"
+              type="button"
+              class="rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-6 py-4 text-lg font-black text-white shadow-xl transition hover:-translate-y-1 hover:shadow-emerald-400/40"
+            >
+              ייצא ל-Google Sheets
+            </button>
+          </div>
+        </div>
+
+        <div id="successBox" class="mt-8 hidden rounded-3xl border border-emerald-200 bg-emerald-50 p-6 shadow-xl"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8IFGZYkd4ALxoFl_Fuv8QwJ-Kn4bBGOcu2XTU22yw/dev";
+
+    let globalCsvData = "";
+
+    const loadBtn = document.getElementById("loadBtn");
+    const downloadCsvBtn = document.getElementById("downloadCsvBtn");
+    const exportSheetBtn = document.getElementById("exportSheetBtn");
+
+    const alertBox = document.getElementById("alertBox");
+    const loadingBox = document.getElementById("loadingBox");
+    const previewTable = document.getElementById("previewTable");
+    const exportBox = document.getElementById("exportBox");
+    const successBox = document.getElementById("successBox");
+
+    function hideMessages() {
+      alertBox.classList.add("hidden");
+      loadingBox.classList.add("hidden");
+      successBox.classList.add("hidden");
+    }
+
+    function showError(message) {
+      alertBox.className = "mt-8 rounded-3xl border border-rose-200 bg-rose-50 p-5 text-base font-bold text-rose-700 shadow-xl";
+      alertBox.textContent = message;
+      alertBox.classList.remove("hidden");
+    }
+
+    function showSuccess(sheetUrl) {
+      successBox.className = "mt-8 rounded-3xl border border-emerald-200 bg-emerald-50 p-6 shadow-xl";
+      successBox.innerHTML = `
+        <h3 class="text-2xl font-black text-emerald-800">הייצוא הושלם בהצלחה</h3>
+        <p class="mt-2 text-sm font-semibold text-emerald-700">גיליון Google Sheets נוצר ומוכן לפתיחה.</p>
+        <a
+          href="${sheetUrl}"
+          target="_blank"
+          class="mt-5 inline-flex rounded-2xl bg-emerald-600 px-6 py-3 text-base font-black text-white shadow-lg transition hover:-translate-y-1 hover:bg-emerald-700"
+        >
+          פתח את הגיליון
+        </a>
+      `;
+      successBox.classList.remove("hidden");
+    }
+
+    function validateForm() {
+      const tickers = document.getElementById("tickers").value.trim();
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      if (!tickers) {
+        showError("אופס! צריך להזין לפחות סימול מניה אחד כדי להמשיך.");
+        return false;
+      }
+
+      if (!startDate || !endDate) {
+        showError("אופס! צריך לבחור גם תאריך התחלה וגם תאריך סיום.");
+        return false;
+      }
+
+      if (new Date(startDate) > new Date(endDate)) {
+        showError("אופס! נראה שתאריך ההתחלה מאוחר מתאריך הסיום...");
+        return false;
+      }
+
+      return true;
+    }
+
+    function parseCsv(csvText) {
+      const rows = [];
+      let currentRow = [];
+      let currentCell = "";
+      let insideQuotes = false;
+
+      for (let i = 0; i < csvText.length; i++) {
+        const char = csvText[i];
+        const nextChar = csvText[i + 1];
+
+        if (char === '"' && insideQuotes && nextChar === '"') {
+          currentCell += '"';
+          i++;
+        } else if (char === '"') {
+          insideQuotes = !insideQuotes;
+        } else if (char === "," && !insideQuotes) {
+          currentRow.push(currentCell);
+          currentCell = "";
+        } else if ((char === "\n" || char === "\r") && !insideQuotes) {
+          if (currentCell !== "" || currentRow.length > 0) {
+            currentRow.push(currentCell);
+            rows.push(currentRow);
+            currentRow = [];
+            currentCell = "";
+          }
+
+          if (char === "\r" && nextChar === "\n") {
+            i++;
+          }
+        } else {
+          currentCell += char;
+        }
+      }
+
+      if (currentCell !== "" || currentRow.length > 0) {
+        currentRow.push(currentCell);
+        rows.push(currentRow);
+      }
+
+      return rows;
+    }
+
+    function buildPreviewTable(csvData) {
+      const rows = parseCsv(csvData).slice(0, 6);
+
+      if (!rows.length) {
+        previewTable.innerHTML = `
+          <div class="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-800 shadow-xl">
+            לא נמצאו נתונים להצגה.
+          </div>
+        `;
+        return;
+      }
+
+      const header = rows[0];
+      const bodyRows = rows.slice(1);
+
+      let html = `
+        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h3 class="text-2xl font-black text-slate-950">תצוגה מקדימה</h3>
+              <p class="mt-2 text-sm font-semibold text-slate-500">מוצגות 6 השורות הראשונות מתוך הטבלה.</p>
+            </div>
+            <div class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
+              תוצאה מוכנה
+            </div>
+          </div>
+
+          <div class="table-wrap overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="min-w-full border-collapse text-right">
+              <thead>
+                <tr class="bg-slate-950 text-white">
+      `;
+
+      header.forEach(cell => {
+        html += `<th class="whitespace-nowrap px-5 py-4 text-sm font-black">${cell}</th>`;
+      });
+
+      html += `
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      bodyRows.forEach((row, rowIndex) => {
+        html += `<tr class="${rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50"} transition hover:bg-cyan-50">`;
+
+        header.forEach((_, index) => {
+          html += `<td class="whitespace-nowrap border-t border-slate-100 px-5 py-4 text-sm font-semibold text-slate-700">${row[index] || ""}</td>`;
+        });
+
+        html += `</tr>`;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      previewTable.innerHTML = html;
+    }
+
+    async function fetchMarketData(actionType) {
+      const payload = {
+        tickers: document.getElementById('tickers').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        frequency: document.getElementById('frequency').value,
+        action: 'csv'
+      };
+
+      payload.action = actionType;
+
+      const response = await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify(payload)
+      });
+
+      return await response.json();
+    }
+
+    loadBtn.addEventListener("click", async () => {
+      hideMessages();
+      previewTable.innerHTML = "";
+      exportBox.classList.add("hidden");
+      globalCsvData = "";
+
+      if (!validateForm()) {
+        return;
+      }
+
+      try {
+        loadingBox.classList.remove("hidden");
+
+        const data = await fetchMarketData("csv");
+
+        loadingBox.classList.add("hidden");
+
+        if (!data || data.status !== "success") {
+          showError(data && data.message ? data.message : "אירעה שגיאה בטעינת הנתונים.");
+          return;
+        }
+
+        globalCsvData = data.csvData;
+        buildPreviewTable(globalCsvData);
+        exportBox.classList.remove("hidden");
+
+      } catch (error) {
+        loadingBox.classList.add("hidden");
+        showError("אירעה שגיאה בתקשורת עם השרת. ודאו שהקישור של Web App תקין.");
+      }
+    });
+
+    downloadCsvBtn.addEventListener("click", () => {
+      hideMessages();
+
+      if (!globalCsvData) {
+        showError("אין עדיין נתונים להורדה. קודם יש ללחוץ על טעינת נתונים.");
+        return;
+      }
+
+      const blob = new Blob([globalCsvData], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "stock_data.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+    });
+
+    exportSheetBtn.addEventListener("click", async () => {
+      hideMessages();
+
+      if (!validateForm()) {
+        return;
+      }
+
+      try {
+        loadingBox.classList.remove("hidden");
+
+        const data = await fetchMarketData("sheet");
+
+        loadingBox.classList.add("hidden");
+
+        if (!data || data.status !== "success") {
+          showError(data && data.message ? data.message : "אירעה שגיאה ביצירת Google Sheets.");
+          return;
+        }
+
+        showSuccess(data.sheetUrl);
+
+      } catch (error) {
+        loadingBox.classList.add("hidden");
+        showError("אירעה שגיאה בתקשורת עם השרת בזמן הייצוא ל־Google Sheets.");
+      }
+    });
+  </script>
+</body>
+</html>
